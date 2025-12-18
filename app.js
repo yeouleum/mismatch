@@ -52,7 +52,7 @@ function getChosungString(str) {
 }
 
 /*************************************************
- * 정규화 / 검색
+ * 정규화 / 유틸
  *************************************************/
 function normBasic(s) {
   return (s ?? "").toString().toLowerCase().replace(/\s+/g, " ").trim();
@@ -76,6 +76,7 @@ function highlight(text, q) {
   const t = (text ?? "").toString();
   if (!q) return escapeHtml(t);
 
+  // 초성-only 검색어는 하이라이트 생략
   const isChosungQuery = /^[ㄱ-ㅎ]+$/.test(q);
   if (isChosungQuery) return escapeHtml(t);
 
@@ -86,6 +87,11 @@ function highlight(text, q) {
   const mid = escapeHtml(t.slice(idx, idx + q.length));
   const after = escapeHtml(t.slice(idx + q.length));
   return `${before}<span class="hl">${mid}</span>${after}`;
+}
+
+// 검색어에 한글 음절(가-힣)이 들어있는지
+function hasHangulSyllables(s) {
+  return /[가-힣]/.test((s ?? "").toString());
 }
 
 /*************************************************
@@ -134,16 +140,15 @@ function buildEmployeeSearchIndex(e) {
   const org = (e.organization ?? "").toString();
   const title = (e.title ?? "").toString();
   const phoneRaw = (e.phone ?? "").toString();
-
   const phoneDisplay = e.__phoneDisplay ?? formatPhoneForDisplay(phoneRaw);
 
-  // ✅ iid는 basicKey에서 제거함 (검색 대상 제외)
+  // ✅ iid는 검색 대상에서 제외
   const basicKey = normBasic(
     [name, org, title, phoneRaw, phoneDisplay].join(" | ")
   );
-
   const digitsKey = onlyDigits(phoneRaw);
 
+  // 초성 키(이름/조직/직함)
   const chosungKey =
     getChosungString(name) +
     " " +
@@ -151,30 +156,63 @@ function buildEmployeeSearchIndex(e) {
     " " +
     getChosungString(title);
 
-  return { basicKey, digitsKey, chosungKey };
+  // "정확 문자열 매칭용" 원문 필드도 따로 유지(오매칭 줄이기)
+  const nameNorm = normBasic(name);
+  const orgNorm = normBasic(org);
+  const titleNorm = normBasic(title);
+  const phoneDispNorm = normBasic(phoneDisplay);
+
+  return {
+    basicKey,
+    digitsKey,
+    chosungKey,
+    nameNorm,
+    orgNorm,
+    titleNorm,
+    phoneDispNorm,
+  };
 }
 
+/*************************************************
+ * ✅ 핵심 수정: 초성 매칭은 "초성-only" 입력일 때만 적용
+ *************************************************/
 function matchesEmployee(e, idx, qRaw) {
   const q = (qRaw ?? "").toString().trim();
   if (!q) return true;
 
+  // 1) 숫자 포함이면 전화 digits 우선
   const qDigits = onlyDigits(q);
   if (qDigits.length >= 2) {
     if (idx.digitsKey.includes(qDigits)) return true;
+    // 숫자 섞인 검색어라도 아래 일반 매칭도 진행
   }
 
+  // 2) 초성-only 검색일 때만 초성 매칭
   const isChosungQuery = /^[ㄱ-ㅎ]+$/.test(q);
   if (isChosungQuery) {
     return idx.chosungKey.replace(/\s+/g, "").includes(q);
   }
 
+  // 3) 일반 검색: 한글 음절이 포함된 경우(예: "최지원")는
+  //    초성으로 절대 보조매칭하지 않고, 실제 문자열 포함만 본다.
   const qNorm = normBasic(q);
   if (!qNorm) return true;
+
+  if (hasHangulSyllables(qNorm)) {
+    // 정확 문자열 포함(이름/조직/직함/표시전화)
+    if (idx.nameNorm.includes(qNorm)) return true;
+    if (idx.orgNorm.includes(qNorm)) return true;
+    if (idx.titleNorm.includes(qNorm)) return true;
+    if (idx.phoneDispNorm.includes(qNorm)) return true;
+    // fallback: 합친 basicKey에도 포함되면 true
+    if (idx.basicKey.includes(qNorm)) return true;
+    return false;
+  }
+
+  // 4) 영문/그 외는 기존처럼 basicKey 부분일치
   if (idx.basicKey.includes(qNorm)) return true;
 
-  const qChos = getChosungString(q).replace(/\s+/g, "");
-  if (qChos && idx.chosungKey.replace(/\s+/g, "").includes(qChos)) return true;
-
+  // ✅ 이전에 있던 "qChos 혼합 입력 대응" 로직은 오매칭의 원인이라 제거함.
   return false;
 }
 
@@ -203,7 +241,7 @@ function groupEmployeesByOrg(employees) {
     const phoneDisplay = formatPhoneForDisplay(phoneRaw);
 
     map.get(key).employees.push({
-      // iid는 남겨도 되지만 UI/검색에 사용하지 않음
+      // iid는 데이터에 남겨도 되지만 UI/검색에 사용하지 않음
       iid: e.iid ?? "",
       name: e.name ?? "",
       organization: orgName,
@@ -232,6 +270,7 @@ function groupEmployeesByOrg(employees) {
 }
 
 function coerceToGroups(data) {
+  // by_org 형식이면 그대로
   if (
     Array.isArray(data) &&
     data.length > 0 &&
@@ -252,8 +291,10 @@ function coerceToGroups(data) {
     }));
   }
 
+  // flat 형식(네 파일)
   if (Array.isArray(data)) return groupEmployeesByOrg(data);
 
+  // 래퍼 객체 대응
   if (data && typeof data === "object") {
     if (Array.isArray(data.groups)) return coerceToGroups(data.groups);
     if (Array.isArray(data.data)) return coerceToGroups(data.data);
