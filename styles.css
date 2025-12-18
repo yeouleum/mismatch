@@ -1,0 +1,244 @@
+:root {
+  --text: #e9eef5;
+  --muted: #aab6c5;
+  --accent: #6aa8ff;
+  --danger: #ff6a6a;
+  --radius: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+    "Noto Sans KR", Arial;
+  background: linear-gradient(180deg, #0b0d10, #080a0d);
+  color: var(--text);
+}
+
+.wrap {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 20px 14px 60px;
+}
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+h1 {
+  font-size: 18px;
+  margin: 0;
+  letter-spacing: 0.2px;
+}
+
+.pill {
+  font-size: 12px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+.searchRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  margin: 12px 0 8px;
+}
+
+.searchRow input {
+  width: 100%;
+  padding: 12px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  color: var(--text);
+  outline: none;
+}
+
+.searchRow input:focus {
+  border-color: rgba(106, 168, 255, 0.6);
+  box-shadow: 0 0 0 3px rgba(106, 168, 255, 0.12);
+}
+
+.btn {
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.btn:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.btn.primary {
+  border-color: rgba(106, 168, 255, 0.4);
+  background: rgba(106, 168, 255, 0.14);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  margin: 6px 0 14px;
+}
+
+.panel {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-top: 10px;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 13px;
+  margin-top: 10px;
+  white-space: pre-wrap;
+}
+
+details.org {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius);
+  margin: 10px 0;
+  overflow: hidden;
+}
+
+details.org[open] {
+  border-color: rgba(106, 168, 255, 0.22);
+  box-shadow: 0 0 0 3px rgba(106, 168, 255, 0.08);
+}
+
+summary.orgHead {
+  list-style: none;
+  cursor: pointer;
+  padding: 14px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.04),
+    rgba(255, 255, 255, 0.02)
+  );
+}
+summary.orgHead::-webkit-details-marker {
+  display: none;
+}
+
+.orgTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.orgName {
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.orgSub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.badge {
+  font-size: 12px;
+  color: var(--muted);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  white-space: nowrap;
+}
+
+.orgBody {
+  padding: 10px 10px 14px;
+}
+
+.list {
+  display: grid;
+  gap: 8px;
+}
+
+.row {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 1fr; /* ✅ iid 컬럼 제거 */
+  gap: 10px;
+  align-items: start;
+}
+
+.left {
+  min-width: 0;
+}
+
+.name {
+  font-weight: 800;
+  font-size: 14px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.title {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 6px;
+}
+
+.phone {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.92;
+}
+
+.hl {
+  color: var(--text);
+  background: rgba(106, 168, 255, 0.22);
+  border: 1px solid rgba(106, 168, 255, 0.25);
+  padding: 0 4px;
+  border-radius: 6px;
+}
+
+.footerTip {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 12px;
+  line-height: 1.4;
+}
+
+.small {
+  font-size: 12px;
+  color: var(--muted);
+}

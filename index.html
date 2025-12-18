@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Employee Directory</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+
+  <body>
+    <div class="wrap">
+      <div class="topbar">
+        <h1>어드밴텍 내선 테스트</br>Workday 기준</h1>
+        
+        <div class="pill" id="statusPill">로딩중…</div>
+      </div>
+
+      <div class="panel">
+        <div class="searchRow">
+          <input
+            id="q"
+            placeholder="검색: 이름(영/한/초성) · 조직(초성 포함) · 전화번호"
+            autocomplete="off"
+          />
+          <button class="btn" id="btnClear">지우기</button>
+          <button class="btn primary" id="btnExpand">결과 펼치기</button>
+        </div>
+
+        <div class="meta">
+          <div>총 직원: <b id="totalPeople">-</b></div>
+          <div>총 조직: <b id="totalOrgs">-</b></div>
+          <div>검색 결과: <b id="matchedPeople">-</b></div>
+          <div class="small">
+            팁: 초성 예) “ㄱㄷㅅ”, 전화 예) “582” 또는 “010”
+          </div>
+        </div>
+
+        <div id="app"></div>
+        <div class="error" id="err" style="display: none"></div>
+
+        <div class="footerTip">
+         
+        </div>
+      </div>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
