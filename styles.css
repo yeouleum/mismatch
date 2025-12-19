@@ -252,3 +252,90 @@ summary.orgHead::-webkit-details-marker {
   font-size: 12px;
   color: var(--muted);
 }
+
+/*팝업 공지*/
+/* ===== 배경 딤(overlay) ===== */
+.sp-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+}
+
+.sp-overlay[hidden] {
+  display: none !important;
+}
+
+/* ===== 모달 박스(스샷 느낌: 테두리/여백/큰 박스) ===== */
+.sp-modal {
+  width: min(500px, 100%);
+  max-height: min(86vh, 860px);
+  background: #fff;
+  border: 1px solid #d7d7d7;
+  box-shadow: 0 14px 45px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+}
+
+/* 상단~본문 영역(스크롤) */
+.sp-content {
+  padding: 26px 26px 0 26px;
+  overflow: auto; /* 본문이 길면 내부 스크롤 */
+}
+
+/* 제목(스샷처럼 큼직/진하게) */
+.sp-title {
+  margin: 0 0 18px 0;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+/* 본문(줄간격 넉넉하게) */
+.sp-body {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #222;
+}
+.sp-body img {
+  width: 90%;
+  display: block;
+  margin: 0 auto;
+}
+
+/* ===== 하단 버튼바(스샷처럼 아래 고정, 좌/우 2등분) ===== */
+.sp-footer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid #d7d7d7;
+  margin-top: auto; /* 아래로 밀기 */
+}
+
+.sp-btn {
+  height: 58px;
+  font-size: 15px;
+  border: 0;
+  background: #fff;
+  cursor: pointer;
+}
+
+.sp-btn--left {
+  border-right: 1px solid #d7d7d7;
+}
+.sp-btn--right {
+  font-weight: 700;
+}
+
+/* 모바일에서 너무 큰 제목이면 살짝 줄이기 */
+@media (max-width: 480px) {
+  .sp-title {
+    font-size: 20px;
+  }
+  .sp-content {
+    padding: 18px 18px 0 18px;
+  }
+}

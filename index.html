@@ -43,6 +43,97 @@
       </div>
     </div>
 
+    <!-- 팝업 1 -->
+    <section class="sp-overlay" data-sp="p1" hidden aria-hidden="true">
+      <div
+        class="sp-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sp1-title"
+      >
+        <div class="sp-content">
+          <h2 id="sp1-title" class="sp-title">
+            내선 현황표 데이터 안내
+          </h2>
+
+          <div class="sp-body">
+            <p>안녕하세요,<br /></p>
+            <p>
+              해당 페이지에서 제공하는 정보는 모두 Workday 사이트에 입력된 내용을 토대로 작성되었습니다.
+            </p>
+            <p>
+              데이터 표시에 오류가 있는 경우, Workday 데이터에 오류가 있을 가능성이 높은 것으로 확인되어 Workday의 정보를 먼저 확인 부탁드립니다.
+            </p>
+            해당 페이지의 정보는 한 달 주기로 업데이트 되고 있으므로, Workday의 정보 수정 시 내용 반영은 최대 4주인 점 참고부탁드립니다.
+            </p>
+            <p>감사합니다.</p>
+          </div>
+        </div>
+
+        <footer class="sp-footer">
+          <button
+            type="button"
+            class="sp-btn sp-btn--left"
+            data-sp-action="hide-today"
+            data-sp-target="p1"
+          >
+            오늘 하루 열지 않기
+          </button>
+          <button
+            type="button"
+            class="sp-btn sp-btn--right"
+            data-sp-action="close"
+            data-sp-target="p1"
+          >
+            닫기
+          </button>
+        </footer>
+      </div>
+    </section>
+
+    <!-- 팝업 2 -->
+    <section class="sp-overlay" data-sp="p2" hidden aria-hidden="true">
+      <div
+        class="sp-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sp2-title"
+      >
+        <div class="sp-content">
+          <!--<h2 id="sp2-title" class="sp-title">야순이</h2>-->
+
+          <div class="sp-body">
+            <img src="./data/yasoon.jpg">
+            <p>
+              
+              야순이 보고가세요...
+            </br>(Cute한 반려동물 자랑 및 제보 > 최썸머)
+            </p>
+          </div>
+        </div>
+
+        <footer class="sp-footer">
+          <button
+            type="button"
+            class="sp-btn sp-btn--left"
+            data-sp-action="hide-today"
+            data-sp-target="p2"
+          >
+            오늘 하루 열지 않기
+          </button>
+          <button
+            type="button"
+            class="sp-btn sp-btn--right"
+            data-sp-action="close"
+            data-sp-target="p2"
+          >
+            닫기
+          </button>
+        </footer>
+      </div>
+    </section>
+
     <script src="./app.js"></script>
+    <script src="./popup.js" defer></script>
   </body>
 </html>
