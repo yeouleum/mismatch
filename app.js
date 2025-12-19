@@ -1,7 +1,7 @@
 /*************************************************
  * 설정
  *************************************************/
-const DATA_URL = "./data/workday_employees_by_org.json";
+const DATA_URL = "./data/workday_employees_min (3).json";
 
 /*************************************************
  * 한글 초성 처리
@@ -44,8 +44,6 @@ function getChosungString(str) {
       out += ch.toLowerCase();
     } else if (/[ㄱ-ㅎ]/.test(ch)) {
       out += ch;
-    } else {
-      // ignore
     }
   }
   return out;
@@ -98,14 +96,13 @@ function hasHangulSyllables(s) {
  *************************************************/
 function stripOrgPrefix(org) {
   const s = (org ?? "").toString().trim();
-  // "Advantech >>" 뒤 공백/특수공백까지 허용
   return s.replace(/^Advantech\s*>>\s*/i, "").trim();
 }
 
 /*************************************************
  * 전화번호 표시 포맷
  * - "582 x400" / "582x400" => "400"
- * - "+82 10-5755-2576" => "010-5755-2576"
+ * - "+82 10-5755-2576" / "+8210..." => "010-5755-2576"
  *************************************************/
 function formatKoreanMobile(digits) {
   if (digits.length === 11)
@@ -115,17 +112,36 @@ function formatKoreanMobile(digits) {
   return digits;
 }
 
+function isExtRaw(rawPhone) {
+  const raw = (rawPhone ?? "").toString().trim();
+  return /^\s*582\s*[xX]\s*/.test(raw);
+}
+
+function extractExt(rawPhone) {
+  const raw = (rawPhone ?? "").toString().trim();
+  const m = raw.match(/^\s*582\s*[xX]\s*([0-9A-Za-z-]+)\s*$/);
+  return m ? m[1] : "";
+}
+
+/**
+ * 표시용 "숫자 포맷"만 반환(라벨 없음)
+ * - 내선이면 ext 숫자만
+ * - +82 휴대폰이면 010-xxxx-xxxx
+ * - 010이면 010-xxxx-xxxx
+ */
 function formatPhoneForDisplay(rawPhone) {
   const raw = (rawPhone ?? "").toString().trim();
   if (!raw) return "";
 
-  // 내선: 582 x400 / 582x400 -> "400"
-  const mExt = raw.match(/^\s*582\s*[xX]\s*([0-9A-Za-z-]+)\s*$/);
-  if (mExt) return mExt[1];
+  // 내선
+  const ext = extractExt(raw);
+  if (ext) return ext;
 
   // +82 제거 + 10 -> 010
   const rawNoSpace = raw.replace(/\s+/g, " ").trim();
-  if (/^\+82\b/.test(rawNoSpace)) {
+
+  // ✅ FIX: "+8210..."도 매칭되도록 \b 제거
+  if (/^\+82/.test(rawNoSpace)) {
     let rest = rawNoSpace.replace(/^\+82\s*/i, "").trim();
     let d = onlyDigits(rest);
     if (d.startsWith("10")) d = "0" + d; // 10xxxxxxxxx -> 010xxxxxxxxx
@@ -140,8 +156,77 @@ function formatPhoneForDisplay(rawPhone) {
   return raw;
 }
 
+/**
+ * 화면 라벨 포함 문자열 생성
+ * - 내선: EXT : 310
+ * - 010: Phone : 010-1234-5678
+ * - 그 외: 그대로
+ */
+function buildPhoneLabel(rawPhone) {
+  const raw = (rawPhone ?? "").toString().trim();
+  if (!raw) return "";
+
+  if (isExtRaw(raw)) {
+    const ext = extractExt(raw);
+    return ext ? `EXT : ${ext}` : "";
+  }
+
+  const disp = formatPhoneForDisplay(raw);
+  if (!disp) return "";
+
+  if (disp.startsWith("010")) return `Phone : ${disp}`;
+  return disp;
+}
+
+/**
+ * mobilePhone도 동일 규칙으로 표시(라벨은 Phone 로 통일 요청대로)
+ */
+function buildMobileLabel(rawMobile) {
+  const raw = (rawMobile ?? "").toString().trim();
+  if (!raw) return "";
+
+  const disp = formatPhoneForDisplay(raw);
+  if (!disp) return "";
+
+  if (disp.startsWith("010")) return `Phone : ${disp}`;
+  return disp;
+}
+
+/**
+ * 중복 판단용 canonical (숫자만 / ext는 EXT:값)
+ */
+function phoneCanonical(raw) {
+  const r = (raw ?? "").toString().trim();
+  if (!r) return "";
+  if (isExtRaw(r)) return `EXT:${extractExt(r)}`;
+  // +82/공백/하이픈 등 다 제거 → 숫자만
+  return onlyDigits(r.startsWith("+82") ? r.replace(/^\+82/, "") : r);
+}
+
+/**
+ * 모바일 표시 여부:
+ * - phone이 내선이면: mobile 무조건 표시
+ * - phone과 mobile이 같은 번호면: mobile 숨김
+ * - 그 외: 표시
+ */
+function shouldShowMobile(e) {
+  const m = (e.mobilePhone ?? "").toString().trim();
+  if (!m) return false;
+
+  const p = (e.phone ?? "").toString().trim();
+
+  if (isExtRaw(p)) return true;
+
+  const pc = phoneCanonical(p);
+  const mc = phoneCanonical(m);
+
+  if (pc && mc && pc === mc) return false;
+
+  return true;
+}
+
 /*************************************************
- * 검색 인덱스 (iid 제외)
+ * 검색 인덱스 (iid 제외) - ✅ mobile 포함
  *************************************************/
 function buildEmployeeSearchIndex(e) {
   const name = (e.name ?? "").toString();
@@ -150,15 +235,29 @@ function buildEmployeeSearchIndex(e) {
   const orgDisplay = e.__orgDisplay ?? stripOrgPrefix(orgRaw);
 
   const title = (e.title ?? "").toString();
-  const phoneRaw = (e.phone ?? "").toString();
-  const phoneDisplay = e.__phoneDisplay ?? formatPhoneForDisplay(phoneRaw);
 
-  // ✅ 조직은 원본/표시용 둘 다 인덱스에 넣어 검색 유지
-  // ✅ iid는 포함하지 않음
+  const phoneRaw = (e.phone ?? "").toString();
+  const phoneLabel = buildPhoneLabel(phoneRaw);
+  const phoneDigits = onlyDigits(phoneCanonical(phoneRaw));
+
+  const mobileRaw = (e.mobilePhone ?? "").toString();
+  const mobileLabel = buildMobileLabel(mobileRaw);
+  const mobileDigits = onlyDigits(phoneCanonical(mobileRaw));
+
   const basicKey = normBasic(
-    [name, orgRaw, orgDisplay, title, phoneRaw, phoneDisplay].join(" | ")
+    [
+      name,
+      orgRaw,
+      orgDisplay,
+      title,
+      phoneRaw,
+      phoneLabel,
+      mobileRaw,
+      mobileLabel,
+    ].join(" | ")
   );
-  const digitsKey = onlyDigits(phoneRaw);
+
+  const digitsKey = [phoneDigits, mobileDigits].filter(Boolean).join("|");
 
   const chosungKey =
     getChosungString(name) +
@@ -173,7 +272,8 @@ function buildEmployeeSearchIndex(e) {
   const orgRawNorm = normBasic(orgRaw);
   const orgDispNorm = normBasic(orgDisplay);
   const titleNorm = normBasic(title);
-  const phoneDispNorm = normBasic(phoneDisplay);
+  const phoneDispNorm = normBasic(phoneLabel);
+  const mobileDispNorm = normBasic(mobileLabel);
 
   return {
     basicKey,
@@ -184,6 +284,7 @@ function buildEmployeeSearchIndex(e) {
     orgDispNorm,
     titleNorm,
     phoneDispNorm,
+    mobileDispNorm,
   };
 }
 
@@ -206,7 +307,7 @@ function matchesEmployee(e, idx, qRaw) {
     return idx.chosungKey.replace(/\s+/g, "").includes(q);
   }
 
-  // 3) 한글 음절 포함(예: "최지원")이면 정확 문자열 포함만
+  // 3) 한글 음절 포함이면 정확 문자열 포함만
   const qNorm = normBasic(q);
   if (!qNorm) return true;
 
@@ -216,6 +317,7 @@ function matchesEmployee(e, idx, qRaw) {
     if (idx.orgDispNorm.includes(qNorm)) return true;
     if (idx.titleNorm.includes(qNorm)) return true;
     if (idx.phoneDispNorm.includes(qNorm)) return true;
+    if (idx.mobileDispNorm.includes(qNorm)) return true;
     if (idx.basicKey.includes(qNorm)) return true;
     return false;
   }
@@ -255,18 +357,16 @@ function groupEmployeesByOrg(employees) {
       });
     }
 
-    const phoneRaw = e.phone ?? "";
-    const phoneDisplay = formatPhoneForDisplay(phoneRaw);
-
     map.get(key).employees.push({
-      iid: e.iid ?? "", // UI/검색에서 iid는 사용 안 함
+      iid: e.iid ?? "",
       name: e.name ?? "",
       organization: orgRaw,
       __orgDisplay: orgDisplay,
       organizationKey: key,
       title: e.title ?? "",
-      phone: phoneRaw,
-      __phoneDisplay: phoneDisplay,
+      phone: e.phone ?? "",
+      // ✅ 추가: mobilePhone 유지
+      mobilePhone: e.mobilePhone ?? "",
     });
   }
 
@@ -305,6 +405,7 @@ function coerceToGroups(data) {
       const emps = (Array.isArray(g.employees) ? g.employees : []).map((e) => {
         const eOrgRaw = normalizeOrgName(e.organization ?? orgRaw);
         const eOrgDisp = stripOrgPrefix(eOrgRaw);
+
         return {
           iid: e.iid ?? "",
           name: e.name ?? "",
@@ -313,7 +414,8 @@ function coerceToGroups(data) {
           organizationKey: e.organizationKey ?? key,
           title: e.title ?? "",
           phone: e.phone ?? "",
-          __phoneDisplay: formatPhoneForDisplay(e.phone ?? ""),
+          // ✅ 추가: mobilePhone 유지
+          mobilePhone: e.mobilePhone ?? "",
         };
       });
 
@@ -411,7 +513,6 @@ function render(groups, query, matchedPeople) {
     const orgNameEl = document.createElement("div");
     orgNameEl.className = "orgName";
 
-    // ✅ 표시용: Advantech >> 제거된 이름
     const displayOrg = g.orgDisplayName ?? stripOrgPrefix(g.orgName);
     orgNameEl.innerHTML = highlight(
       displayOrg || "(No Organization)",
@@ -455,9 +556,23 @@ function render(groups, query, matchedPeople) {
 
       const ph = document.createElement("div");
       ph.className = "phone";
-      const phoneDisplay =
-        e.__phoneDisplay ?? formatPhoneForDisplay(e.phone ?? "");
-      ph.innerHTML = highlight(phoneDisplay || "", STATE.query);
+
+      // ✅ phone 1줄
+      const phoneLabel = buildPhoneLabel(e.phone ?? "");
+      let html = "";
+      if (phoneLabel) {
+        html += `<div>${highlight(phoneLabel, STATE.query)}</div>`;
+      }
+
+      // ✅ mobile 2줄 (조건부)
+      if (shouldShowMobile(e)) {
+        const mobileLabel = buildMobileLabel(e.mobilePhone ?? "");
+        if (mobileLabel) {
+          html += `<div>${highlight(mobileLabel, STATE.query)}</div>`;
+        }
+      }
+
+      ph.innerHTML = html;
 
       l.appendChild(nm);
       l.appendChild(tt);
