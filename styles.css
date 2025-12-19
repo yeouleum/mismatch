@@ -1,6 +1,14 @@
+@font-face {
+  font-family: "Cafe24SurroundAir";
+  src: url("https://gcore.jsdelivr.net/gh/projectnoonnu/noonfonts_2105_2@1.0/Cafe24SsurroundAir.woff")
+    format("woff");
+  font-weight: normal;
+  font-display: swap;
+}
+
 :root {
-  --text: #e9eef5;
-  --muted: #aab6c5;
+  --text: #252525;
+  --muted: #868686;
   --accent: #6aa8ff;
   --danger: #ff6a6a;
   --radius: 12px;
@@ -12,34 +20,39 @@
 
 body {
   margin: 0;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
-    "Noto Sans KR", Arial;
-  background: linear-gradient(180deg, #0b0d10, #080a0d);
+  font-family: "Cafe24SurroundAir";
+  background: #fff;
   color: var(--text);
 }
 
 .wrap {
   max-width: 980px;
   margin: 0 auto;
+  margin-top: 25px;
   padding: 20px 14px 60px;
 }
 
 .topbar {
-  display: flex;
+  display: block;
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 0px;
 }
 
 h1 {
-  font-size: 18px;
+  font-size: 25px;
   margin: 0;
   letter-spacing: 0.2px;
+  margin-bottom: 5px;
 }
 
+.topbar span {
+  font-size: 11px;
+}
 .pill {
+  display: none;
   font-size: 12px;
   color: var(--muted);
   background: rgba(255, 255, 255, 0.04);
@@ -59,15 +72,15 @@ h1 {
 .searchRow input {
   width: 100%;
   padding: 12px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0);
+  border: 1px solid rgb(0, 0, 0);
   border-radius: 10px;
   color: var(--text);
   outline: none;
 }
 
 .searchRow input:focus {
-  border-color: rgba(106, 168, 255, 0.6);
+  border-color: rgba(106, 168, 255, 0);
   box-shadow: 0 0 0 3px rgba(106, 168, 255, 0.12);
 }
 
@@ -86,8 +99,11 @@ h1 {
 }
 
 .btn.primary {
-  border-color: rgba(106, 168, 255, 0.4);
-  background: rgba(106, 168, 255, 0.14);
+  border-color: rgba(106, 168, 255, 0);
+  background: rgba(106, 168, 255, 0);
+}
+#btnClear {
+  display: none;
 }
 
 .meta {
@@ -103,7 +119,7 @@ h1 {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius);
-  padding: 14px;
+  padding: 0px;
   margin-top: 10px;
 }
 
@@ -117,29 +133,22 @@ h1 {
 details.org {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: var(--radius);
   margin: 10px 0;
   overflow: hidden;
 }
 
 details.org[open] {
-  border-color: rgba(106, 168, 255, 0.22);
-  box-shadow: 0 0 0 3px rgba(106, 168, 255, 0.08);
 }
 
 summary.orgHead {
   list-style: none;
   cursor: pointer;
-  padding: 14px 14px;
+  /*padding: 14px 14px;*/
+  padding-top: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.04),
-    rgba(255, 255, 255, 0.02)
-  );
 }
 summary.orgHead::-webkit-details-marker {
   display: none;
@@ -234,8 +243,9 @@ summary.orgHead::-webkit-details-marker {
 .footerTip {
   color: var(--muted);
   font-size: 12px;
-  margin-top: 12px;
+  margin-top: 30px;
   line-height: 1.4;
+  text-align: center;
 }
 
 .small {

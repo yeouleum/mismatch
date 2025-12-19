@@ -3,16 +3,17 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Employee Directory</title>
+    <title>내선 현황</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
 
   <body>
     <div class="wrap">
       <div class="topbar">
-        <h1>어드밴텍 내선 테스트</br>Workday 기준</h1>
-        
+        <h1>어드밴텍 내선 현황</h1>
+
         <div class="pill" id="statusPill">로딩중…</div>
+        <span>Update date : 25-12-18</span>
       </div>
 
       <div class="panel">
@@ -23,7 +24,7 @@
             autocomplete="off"
           />
           <button class="btn" id="btnClear">지우기</button>
-          <button class="btn primary" id="btnExpand">결과 펼치기</button>
+          <button class="btn primary" id="btnExpand">검색</button>
         </div>
 
         <div class="meta">
@@ -38,9 +39,7 @@
         <div id="app"></div>
         <div class="error" id="err" style="display: none"></div>
 
-        <div class="footerTip">
-         
-        </div>
+        <div class="footerTip">오류 및 개선 사항 문의 : 최썸머</div>
       </div>
     </div>
 

@@ -89,9 +89,17 @@ function highlight(text, q) {
   return `${before}<span class="hl">${mid}</span>${after}`;
 }
 
-// 검색어에 한글 음절(가-힣)이 들어있는지
 function hasHangulSyllables(s) {
   return /[가-힣]/.test((s ?? "").toString());
+}
+
+/*************************************************
+ * ✅ 조직명 표시 포맷: "Advantech >> " 제거
+ *************************************************/
+function stripOrgPrefix(org) {
+  const s = (org ?? "").toString().trim();
+  // "Advantech >>" 뒤 공백/특수공백까지 허용
+  return s.replace(/^Advantech\s*>>\s*/i, "").trim();
 }
 
 /*************************************************
@@ -133,32 +141,37 @@ function formatPhoneForDisplay(rawPhone) {
 }
 
 /*************************************************
- * 검색 인덱스 (✅ iid 제외)
+ * 검색 인덱스 (iid 제외)
  *************************************************/
 function buildEmployeeSearchIndex(e) {
   const name = (e.name ?? "").toString();
-  const org = (e.organization ?? "").toString();
+
+  const orgRaw = (e.organization ?? "").toString();
+  const orgDisplay = e.__orgDisplay ?? stripOrgPrefix(orgRaw);
+
   const title = (e.title ?? "").toString();
   const phoneRaw = (e.phone ?? "").toString();
   const phoneDisplay = e.__phoneDisplay ?? formatPhoneForDisplay(phoneRaw);
 
-  // ✅ iid는 검색 대상에서 제외
+  // ✅ 조직은 원본/표시용 둘 다 인덱스에 넣어 검색 유지
+  // ✅ iid는 포함하지 않음
   const basicKey = normBasic(
-    [name, org, title, phoneRaw, phoneDisplay].join(" | ")
+    [name, orgRaw, orgDisplay, title, phoneRaw, phoneDisplay].join(" | ")
   );
   const digitsKey = onlyDigits(phoneRaw);
 
-  // 초성 키(이름/조직/직함)
   const chosungKey =
     getChosungString(name) +
     " " +
-    getChosungString(org) +
+    getChosungString(orgRaw) +
+    " " +
+    getChosungString(orgDisplay) +
     " " +
     getChosungString(title);
 
-  // "정확 문자열 매칭용" 원문 필드도 따로 유지(오매칭 줄이기)
   const nameNorm = normBasic(name);
-  const orgNorm = normBasic(org);
+  const orgRawNorm = normBasic(orgRaw);
+  const orgDispNorm = normBasic(orgDisplay);
   const titleNorm = normBasic(title);
   const phoneDispNorm = normBasic(phoneDisplay);
 
@@ -167,52 +180,49 @@ function buildEmployeeSearchIndex(e) {
     digitsKey,
     chosungKey,
     nameNorm,
-    orgNorm,
+    orgRawNorm,
+    orgDispNorm,
     titleNorm,
     phoneDispNorm,
   };
 }
 
 /*************************************************
- * ✅ 핵심 수정: 초성 매칭은 "초성-only" 입력일 때만 적용
+ * ✅ 핵심: 초성 매칭은 "초성-only" 입력일 때만
  *************************************************/
 function matchesEmployee(e, idx, qRaw) {
   const q = (qRaw ?? "").toString().trim();
   if (!q) return true;
 
-  // 1) 숫자 포함이면 전화 digits 우선
+  // 1) 숫자(전화) 우선
   const qDigits = onlyDigits(q);
   if (qDigits.length >= 2) {
     if (idx.digitsKey.includes(qDigits)) return true;
-    // 숫자 섞인 검색어라도 아래 일반 매칭도 진행
   }
 
-  // 2) 초성-only 검색일 때만 초성 매칭
+  // 2) 초성-only 입력이면 초성으로만 매칭
   const isChosungQuery = /^[ㄱ-ㅎ]+$/.test(q);
   if (isChosungQuery) {
     return idx.chosungKey.replace(/\s+/g, "").includes(q);
   }
 
-  // 3) 일반 검색: 한글 음절이 포함된 경우(예: "최지원")는
-  //    초성으로 절대 보조매칭하지 않고, 실제 문자열 포함만 본다.
+  // 3) 한글 음절 포함(예: "최지원")이면 정확 문자열 포함만
   const qNorm = normBasic(q);
   if (!qNorm) return true;
 
   if (hasHangulSyllables(qNorm)) {
-    // 정확 문자열 포함(이름/조직/직함/표시전화)
     if (idx.nameNorm.includes(qNorm)) return true;
-    if (idx.orgNorm.includes(qNorm)) return true;
+    if (idx.orgRawNorm.includes(qNorm)) return true;
+    if (idx.orgDispNorm.includes(qNorm)) return true;
     if (idx.titleNorm.includes(qNorm)) return true;
     if (idx.phoneDispNorm.includes(qNorm)) return true;
-    // fallback: 합친 basicKey에도 포함되면 true
     if (idx.basicKey.includes(qNorm)) return true;
     return false;
   }
 
-  // 4) 영문/그 외는 기존처럼 basicKey 부분일치
+  // 4) 영문/기타는 basicKey 부분일치
   if (idx.basicKey.includes(qNorm)) return true;
 
-  // ✅ 이전에 있던 "qChos 혼합 입력 대응" 로직은 오매칭의 원인이라 제거함.
   return false;
 }
 
@@ -232,19 +242,27 @@ function groupEmployeesByOrg(employees) {
   const map = new Map();
 
   for (const e of employees) {
-    const orgName = normalizeOrgName(e.organization);
-    const key = e.organizationKey ? e.organizationKey : orgKeyOf(orgName);
+    const orgRaw = normalizeOrgName(e.organization);
+    const orgDisplay = stripOrgPrefix(orgRaw);
+    const key = e.organizationKey ? e.organizationKey : orgKeyOf(orgRaw);
 
-    if (!map.has(key)) map.set(key, { orgKey: key, orgName, employees: [] });
+    if (!map.has(key)) {
+      map.set(key, {
+        orgKey: key,
+        orgName: orgRaw,
+        orgDisplayName: orgDisplay,
+        employees: [],
+      });
+    }
 
     const phoneRaw = e.phone ?? "";
     const phoneDisplay = formatPhoneForDisplay(phoneRaw);
 
     map.get(key).employees.push({
-      // iid는 데이터에 남겨도 되지만 UI/검색에 사용하지 않음
-      iid: e.iid ?? "",
+      iid: e.iid ?? "", // UI/검색에서 iid는 사용 안 함
       name: e.name ?? "",
-      organization: orgName,
+      organization: orgRaw,
+      __orgDisplay: orgDisplay,
       organizationKey: key,
       title: e.title ?? "",
       phone: phoneRaw,
@@ -253,7 +271,9 @@ function groupEmployeesByOrg(employees) {
   }
 
   const groups = Array.from(map.values());
-  groups.sort((a, b) => (a.orgName || "").localeCompare(b.orgName || "", "ko"));
+  groups.sort((a, b) =>
+    (a.orgDisplayName || "").localeCompare(b.orgDisplayName || "", "ko")
+  );
 
   for (const g of groups) {
     g.employees.sort((a, b) =>
@@ -264,31 +284,46 @@ function groupEmployeesByOrg(employees) {
   return groups.map((g) => ({
     orgKey: g.orgKey,
     orgName: g.orgName,
+    orgDisplayName: g.orgDisplayName,
     count: g.employees.length,
     employees: g.employees,
   }));
 }
 
 function coerceToGroups(data) {
-  // by_org 형식이면 그대로
+  // by_org 형식이면 그대로 (표시용만 보강)
   if (
     Array.isArray(data) &&
     data.length > 0 &&
     Array.isArray(data[0]?.employees)
   ) {
-    return data.map((g) => ({
-      orgKey: g.orgKey || orgKeyOf(g.orgName),
-      orgName: normalizeOrgName(g.orgName),
-      employees: (Array.isArray(g.employees) ? g.employees : []).map((e) => ({
-        iid: e.iid ?? "",
-        name: e.name ?? "",
-        organization: normalizeOrgName(e.organization ?? g.orgName),
-        organizationKey: e.organizationKey ?? (g.orgKey || orgKeyOf(g.orgName)),
-        title: e.title ?? "",
-        phone: e.phone ?? "",
-        __phoneDisplay: formatPhoneForDisplay(e.phone ?? ""),
-      })),
-    }));
+    return data.map((g) => {
+      const orgRaw = normalizeOrgName(g.orgName);
+      const orgDisplay = stripOrgPrefix(orgRaw);
+      const key = g.orgKey || orgKeyOf(orgRaw);
+
+      const emps = (Array.isArray(g.employees) ? g.employees : []).map((e) => {
+        const eOrgRaw = normalizeOrgName(e.organization ?? orgRaw);
+        const eOrgDisp = stripOrgPrefix(eOrgRaw);
+        return {
+          iid: e.iid ?? "",
+          name: e.name ?? "",
+          organization: eOrgRaw,
+          __orgDisplay: eOrgDisp,
+          organizationKey: e.organizationKey ?? key,
+          title: e.title ?? "",
+          phone: e.phone ?? "",
+          __phoneDisplay: formatPhoneForDisplay(e.phone ?? ""),
+        };
+      });
+
+      return {
+        orgKey: key,
+        orgName: orgRaw,
+        orgDisplayName: orgDisplay,
+        employees: emps,
+      };
+    });
   }
 
   // flat 형식(네 파일)
@@ -337,6 +372,7 @@ function filterGroups(groups, query) {
       out.push({
         orgKey: g.orgKey,
         orgName: g.orgName,
+        orgDisplayName: g.orgDisplayName ?? stripOrgPrefix(g.orgName),
         count: filtered.length,
         employees: filtered,
       });
@@ -372,10 +408,13 @@ function render(groups, query, matchedPeople) {
     const left = document.createElement("div");
     left.className = "orgTitle";
 
-    const orgName = document.createElement("div");
-    orgName.className = "orgName";
-    orgName.innerHTML = highlight(
-      g.orgName || "(No Organization)",
+    const orgNameEl = document.createElement("div");
+    orgNameEl.className = "orgName";
+
+    // ✅ 표시용: Advantech >> 제거된 이름
+    const displayOrg = g.orgDisplayName ?? stripOrgPrefix(g.orgName);
+    orgNameEl.innerHTML = highlight(
+      displayOrg || "(No Organization)",
       STATE.query
     );
 
@@ -383,7 +422,7 @@ function render(groups, query, matchedPeople) {
     sub.className = "orgSub";
     sub.textContent = `검색 매칭: ${g.count}명`;
 
-    left.appendChild(orgName);
+    left.appendChild(orgNameEl);
     left.appendChild(sub);
 
     const badge = document.createElement("div");
